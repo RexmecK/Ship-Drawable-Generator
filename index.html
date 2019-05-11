@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <title>Rexmeck Ship Drawable Generator</title>
+        <style>
+            .default-font {
+                font-family: Arial, Helvetica, sans-serif;
+                font-size: 0.5cm;
+                font-weight:lighter;
+            }
+            
+            .default-button {
+                color: #111; 
+                border: 2px solid #888; 
+                border-radius: 4px; 
+                background-color: #eee;
+            }
+
+            body {
+              height: 100vh;
+              margin: 0;
+              background-color: #000; 
+              padding: 0;
+              position: relative;
+            }
+
+            .header {
+                overflow: hidden;
+                background-color: #202020;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 100%;
+                max-height: 8cm;
+                z-index: 99;
+            }
+
+            #generating {
+                display: none;
+            }
+            .middle-align {
+                overflow: hidden;
+                max-width: 960px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            
+            .shadow {
+                box-shadow: 0px 20px 20px 0px #00000040;
+            }
+
+            .page-element {
+                margin-top: 30px;
+                padding-top: 30px;
+                padding-bottom: 30px;
+            }
+
+        </style>
+    </head>
+    
+    <body>
+        <div class="header shadow">
+            <h1 align="center" class="default-font" style="font-size: 1cm; color:#808080; margin-top: 15px;">Rexmeck Ship Drawable Generator</h1>
+        </div>
+        <!--Main page-->
+        <div class="middle-align shadow page-element" style="background-color: #fafafa; min-width: 120px;">
+            <div style="padding-left: 3.5%; padding-right: 5%;">
+                <label class="default-font">Input: </label>
+                <br>
+                <button name="generate" onclick="generate()" class="default-button">Generate</button>
+                <input type="file" id="input" accept="image/*" class="default-button">
+                <label id="generating" class="default-font" >Generating...</label>
+                <br>
+                <br>
+                <label class="default-font">Output: </label>
+                <br>
+                <br>
+                <textarea id="output" wrap="soft" spellcheck="false" style="max-width:100%; min-width: 100%; height: 250px; resize: vertical;"> </textarea>
+            </div>
+        </div>
+        
+        <div class="middle-align shadow page-element" style=" background-color: #fafafa; min-width: 120px;">
+            <div style="padding-left: 3.5%; padding-right: 5%;">
+                <h1 align="center" class="default-font">Advanced Settings</h1>
+                <br>
+                <label class="default-font">Offset:</label>
+                <input class="default-font" type="number" id="offsetX" value="0">
+                <input class="default-font" type="number" id="offsetY" value="0">
+                <br>
+                <br>
+                <input type="checkbox" id="checkboxfullbright" class="default-font" title="Fullbright drawables"></input>
+                <label class="default-font">Fullbright</label>
+                <br>
+                <br>
+            </div>
+        </div>
+
+    </body>
+    
+    <script>
+        var ready = true
+
+        //Util credits from people on stackoverflow
+        function componentToHex(c) {
+            var hex = c.toString(16);
+            return hex.length == 1 ? "0" + hex : hex;
+        }
+        
+        function hexEnd0(v) {
+            for(var i=0;i<16;i++){
+                if(v == i * 17) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function rgbaToHex(r, g, b, a) {
+            //very bad coding here
+            r = Math.min(r,255);
+            g = Math.min(g,255);
+            b = Math.min(b,255);
+            a = Math.min(a,255);
+
+            if(a == 0 && !document.getElementById("ctrans").checked) {
+                return "0000";
+            }
+
+            if(hexEnd0(r) && hexEnd0(g) && hexEnd0(b)) {
+                if (a == 255) {
+                    return componentToHex(r).substring(0, 1) + componentToHex(g).substring(0, 1) + componentToHex(b).substring(0, 1);
+                }
+                else{
+                    if(hexEnd0(a)){
+                        return componentToHex(r).substring(0, 1) + componentToHex(g).substring(0, 1) + componentToHex(b).substring(0, 1) + componentToHex(a).substring(0, 1);
+                    }
+                }
+            }
+            if(a == 255){
+                return componentToHex(r) + componentToHex(g) + componentToHex(b)
+            }
+            return componentToHex(r) + componentToHex(g) + componentToHex(b) + componentToHex(a);
+        }
+
+        function rgbaToHexNoTransparentCheck(r, g, b, a) {
+            r = Math.min(r,255);
+            g = Math.min(g,255);
+            b = Math.min(b,255);
+            a = Math.min(a,255);
+            if(hexEnd0(r) && hexEnd0(g) && hexEnd0(b)) {
+                if (a == 255) {
+                    return componentToHex(r).substring(0, 1) + componentToHex(g).substring(0, 1) + componentToHex(b).substring(0, 1);
+                }
+                else{
+                    if(hexEnd0(a)){
+                        return componentToHex(r).substring(0, 1) + componentToHex(g).substring(0, 1) + componentToHex(b).substring(0, 1) + componentToHex(a).substring(0, 1);
+                    }
+                }
+            }
+
+            if(a == 255){
+                return componentToHex(r) + componentToHex(g) + componentToHex(b)
+            }
+            return componentToHex(r) + componentToHex(g) + componentToHex(b) + componentToHex(a);
+        }
+        //
+
+        //button callback
+        function generate(){
+            let outputText = document.getElementById("output");
+            let generatingtext = document.getElementById("generating");
+            outputText.value = "";
+
+            generatingtext.style.display = "initial";
+            
+            if (ready && document.getElementById("input").files.length == 1) {
+                ready = false
+                let reader = new FileReader();
+                let f = document.getElementById("input").files[0];
+                reader.onload = function(a) 
+                {
+                    let img = new Image;
+                    img.onload = function() { 
+                        document.getElementById("output").value = drawShip(img);
+                        generatingtext.style.display = "none";
+                        ready = true
+                    } ;
+                    img.src = a.target.result;
+                }
+                reader.readAsDataURL(f);
+            }
+            else
+            {
+                generatingtext.style.display = "none";
+            }
+        }
+
+        function stepsize(x)
+        {
+            return Math.ceil(Math.min(x, 256) / 128) * 128;
+        }
+
+        function drawShip(image) {
+            let img = document.createElement('canvas');
+            img.width = image.width + 2;
+            img.height = image.height + 2;
+            let context2d = img.getContext('2d');
+            context2d.drawImage(image, 0,0);
+            let shipDrawables = [];
+            let size = [Math.ceil(img.width / 255), Math.ceil(img.height / 255)];
+            let offsetX = document.getElementById("offsetX").value / 1;
+            let offsetY = document.getElementById("offsetY").value / 1;
+            let fullbright = document.getElementById("checkboxfullbright").checked;
+            for(let x = 0; x < size[0]; x++)
+            {
+                for(let y = 0; y < size[1]; y++)
+                {
+                    let image = drawFade(
+                                img,
+                                context2d, 
+                                [
+                                    Math.min((x)*255, img.width), 
+                                    Math.min((y)*255, img.height)
+                                ], 
+                                [
+                                    Math.min((x+1)*255, img.width), 
+                                    Math.min((y+1)*255, img.height)
+                                ]
+                            )
+                    if(image != "/assetmissing.png") {
+                        shipDrawables.push({
+                            "image" : image,
+                            "position" : [(x * 255 / 8) + offsetX, (y * 255 / 8) + offsetY],
+                            "fullbright" : fullbright
+                        });
+                    } 
+                }
+            }
+            return JSON.stringify(shipDrawables);
+        }
+
+        function drawFade(img, context2d, start, end) {
+            
+            let greenIndex = 170
+            let fixsize = [stepsize(end[0] - start[0]), stepsize(end[1] - start[1])];
+            let srcDirectory = "/assetmissing.png";
+            let srcSize = [64, 64];
+            let directives = "?crop=;0;0;1;1?setcolor=fff?replace;0000=" + rgbaToHexNoTransparentCheck(0, greenIndex, 0, 0) + ";fff0=" + rgbaToHexNoTransparentCheck(0, greenIndex, 0, 0) + ";fff=" + rgbaToHexNoTransparentCheck(0, greenIndex, 0, 0) + "?scalenearest=2?blendscreen=/objects/outpost/customsign/signplaceholder.png"
+            
+            //setgradient
+            directives += //"?replace;0a00=" + rgbaToHexNoTransparentCheck(0, 170, 0,0) +
+                        "?replace;" + rgbaToHexNoTransparentCheck(1, greenIndex, 0, 0) + "=" + rgbaToHexNoTransparentCheck(fixsize[0], greenIndex, 0,0) +
+                        ";" + rgbaToHexNoTransparentCheck(0, greenIndex, 1, 0) + "=" + rgbaToHexNoTransparentCheck(0, greenIndex, fixsize[1], 0) +
+                        ";" + rgbaToHexNoTransparentCheck(1, greenIndex, 1, 0) + "=" + rgbaToHexNoTransparentCheck(fixsize[0], greenIndex, fixsize[1], 0);
+
+            //setoptimizedsize
+            directives += "?scale=" + (fixsize[0]) + ";" + (fixsize[1]); 
+            //size
+            directives += "?crop=" + Math.round(fixsize[0]/512) + ";" + Math.round(fixsize[1]/512) + ";" + ((end[0] - start[0]) + Math.round(fixsize[0]/512)) + ";" + ((end[1] - start[1]) + Math.round(fixsize[1]/512));
+
+            let palletes = ""
+            for(let sx = start[0]; sx <= end[0] + 1; sx++)
+            {
+                for(let sy = start[1]; sy <= end[1] + 1; sy++)
+                {
+                    let ssx = sx - 1
+                    let ssy = img.height - sy - 1
+                    let pix = context2d.getImageData(ssx, ssy, 1, 1).data;
+                    if (pix[3] > 0){ 
+                        palletes += ";" + rgbaToHexNoTransparentCheck((sx - start[0]) - Math.round(fixsize[0]/256), greenIndex, (sy - start[1] - 1) - Math.round(fixsize[1]/256),0) + "=" + rgbaToHex(pix[0], pix[1], pix[2], pix[3]);
+                    }
+                    else{
+                    }
+                }
+            }
+
+            if(palletes == ""){
+                return srcDirectory;
+            }
+
+            return srcDirectory + directives + "?replace" + palletes;
+        }
+
+        //website visuals
+
+        function lerp(a,b,r)
+        {
+            return a+(b-a)*r;
+        }
+
+        var speed = 1/16;
+
+        var lastColor = [0, 212, 219];
+        var targetColor = [70, 112, 16];
+            
+        var current_lastColor = [0, 0, 0];
+        var current_targetColor = [0, 0, 0];
+
+        function tick()
+        {
+            current_lastColor = [lerp(current_lastColor[0], lastColor[0], speed), lerp(current_lastColor[1], lastColor[1], speed), lerp(current_lastColor[2], lastColor[2], speed)];
+            current_targetColor = [lerp(current_targetColor[0], targetColor[0], speed), lerp(current_targetColor[1], targetColor[1], speed), lerp(current_targetColor[2], targetColor[2], speed)];
+            document.body.style.backgroundImage = "linear-gradient(90deg, rgb("+current_targetColor[0]+","+current_targetColor[1]+","+current_targetColor[2]+"),rgb("+current_lastColor[0]+","+current_lastColor[1]+","+current_lastColor[2]+"))";
+        }
+
+        function tick2()
+        {
+            lastColor = targetColor;
+            targetColor = [Math.random() * 255, Math.random() * 255, Math.random() * 255];
+        }
+
+        tick();
+        tick2();
+
+        setInterval(tick2,5000);
+        setInterval(tick,64);
+    </script>
+</html> 
